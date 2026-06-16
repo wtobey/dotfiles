@@ -8,6 +8,19 @@ set -euo pipefail
 
 log() { echo "[dotfiles] $*" >&2; }
 
+# Ensure the xterm-ghostty terminfo entry exists. We connect from Ghostty, which
+# sets TERM=xterm-ghostty, but remote workspaces don't ship that terminfo — so
+# `tmux attach` (hence aoe's tmux and live session views) dies with
+# "missing or unsuitable terminal: xterm-ghostty". Derive it from xterm-256color,
+# which Ghostty is compatible with. Runs before the aoe early-exit below so it
+# applies even when aoe is already installed. Idempotent: skips if resolvable.
+if ! infocmp xterm-ghostty >/dev/null 2>&1; then
+  log "installing xterm-ghostty terminfo (tmux/aoe attach prerequisite)"
+  infocmp -x xterm-256color \
+    | sed -E 's/^xterm-256color\|[^,]*,/xterm-ghostty|Ghostty (xterm-256color fallback),/' \
+    | tic -x -o "$HOME/.terminfo" -
+fi
+
 if command -v aoe >/dev/null 2>&1; then
   log "aoe already installed ($(aoe --version 2>/dev/null || echo 'version unknown')); skipping"
   exit 0
