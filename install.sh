@@ -21,6 +21,38 @@ if ! infocmp xterm-ghostty >/dev/null 2>&1; then
     | tic -x -o "$HOME/.terminfo" -
 fi
 
+# Set up tmux session persistence (resurrect + continuum via TPM). In Coder
+# devcontainers ~/.tmux lives in the container overlay and is wiped on every restart,
+# so TPM and the plugins must be reinstalled on each start. Resurrect snapshots are
+# saved under /workspaces (the persistent disk) when available, so sessions survive a
+# restart. Runs before the aoe early-exit so it applies even when aoe is installed.
+if command -v tmux >/dev/null 2>&1; then
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  ln -sf "$script_dir/.tmux.conf" "$HOME/.tmux.conf"
+
+  # Choose a persistent resurrect dir (durable /workspaces mount, else $HOME) and
+  # record it for .tmux.conf to source.
+  if [ -d /workspaces ] && [ -w /workspaces ]; then
+    resurrect_dir=/workspaces/.tmux/resurrect
+  else
+    resurrect_dir="$HOME/.tmux/resurrect"
+  fi
+  mkdir -p "$resurrect_dir" "$HOME/.tmux"
+  printf "set -g @resurrect-dir '%s'\n" "$resurrect_dir" > "$HOME/.tmux/resurrect-dir.conf"
+
+  tpm_dir="$HOME/.tmux/plugins/tpm"
+  if [ ! -d "$tpm_dir" ]; then
+    log "installing TPM (tmux plugin manager)"
+    git clone --depth 1 https://github.com/tmux-plugins/tpm "$tpm_dir" \
+      || log "WARNING: TPM clone failed; tmux plugins unavailable this session"
+  fi
+  if [ -x "$tpm_dir/bin/install_plugins" ]; then
+    log "installing/updating tmux plugins via TPM"
+    "$tpm_dir/bin/install_plugins" >/dev/null 2>&1 \
+      || log "WARNING: TPM plugin install reported an issue (prefix + I to retry inside tmux)"
+  fi
+fi
+
 if command -v aoe >/dev/null 2>&1; then
   log "aoe already installed ($(aoe --version 2>/dev/null || echo 'version unknown')); skipping"
   exit 0
