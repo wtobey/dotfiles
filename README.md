@@ -7,6 +7,7 @@ must be executable). The script:
 
 - installs the [Agent of Empires](https://www.agent-of-empires.com) `aoe` CLI (idempotent —
   no-ops when `aoe` is already present);
+- symlinks `.gitconfig` (git identity) into `$HOME`;
 - installs the `xterm-ghostty` terminfo entry so `tmux`/`aoe` attach works from Ghostty;
 - symlinks `.tmux.conf` and installs TPM + `tmux-resurrect`/`tmux-continuum` so tmux sessions
   auto-save and restore across workspace restarts. Snapshots are written under `/workspaces`

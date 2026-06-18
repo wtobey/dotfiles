@@ -8,6 +8,15 @@ set -euo pipefail
 
 log() { echo "[dotfiles] $*" >&2; }
 
+# Directory this script lives in (the cloned dotfiles repo); used to symlink tracked
+# config files into $HOME.
+dotfiles_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Symlink personal git config (identity, etc.) into place. Declarative config belongs
+# here in dotfiles, not in a persisted volume mount. Runs before the aoe early-exit so
+# it applies on every start.
+ln -sf "$dotfiles_dir/.gitconfig" "$HOME/.gitconfig"
+
 # Ensure the xterm-ghostty terminfo entry exists. We connect from Ghostty, which
 # sets TERM=xterm-ghostty, but remote workspaces don't ship that terminfo — so
 # `tmux attach` (hence aoe's tmux and live session views) dies with
@@ -27,8 +36,7 @@ fi
 # saved under /workspaces (the persistent disk) when available, so sessions survive a
 # restart. Runs before the aoe early-exit so it applies even when aoe is installed.
 if command -v tmux >/dev/null 2>&1; then
-  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  ln -sf "$script_dir/.tmux.conf" "$HOME/.tmux.conf"
+  ln -sf "$dotfiles_dir/.tmux.conf" "$HOME/.tmux.conf"
 
   # Choose a persistent resurrect dir (durable /workspaces mount, else $HOME) and
   # record it for .tmux.conf to source.

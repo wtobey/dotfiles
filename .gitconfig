@@ -1,0 +1,6 @@
+# Symlinked to ~/.gitconfig by install.sh on every workspace start.
+# Identity only — Coder provisions git credentials via GIT_ASKPASS, so auth is not
+# configured here.
+[user]
+	name = Will Tobey
+	email = will@elera.health
