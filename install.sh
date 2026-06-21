@@ -61,6 +61,16 @@ if command -v tmux >/dev/null 2>&1; then
   fi
 fi
 
+# Install ccremote-spawn so the ccremote Slack bot can launch a Remote Control
+# session on this workspace via `coder ssh` (github.com/wtobey/ccremote). Runs
+# before the aoe early-exit so it applies on every start. Idempotent: install -m
+# overwrites in place.
+if [ -f "$dotfiles_dir/ccremote-spawn" ]; then
+  log "installing ccremote-spawn to ~/.local/bin"
+  mkdir -p "$HOME/.local/bin"
+  install -m 0755 "$dotfiles_dir/ccremote-spawn" "$HOME/.local/bin/ccremote-spawn"
+fi
+
 if command -v aoe >/dev/null 2>&1; then
   log "aoe already installed ($(aoe --version 2>/dev/null || echo 'version unknown')); skipping"
   exit 0

@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Spawn a fresh Claude Code session in tmux and connect it to Remote Control.
+# Runs ON a Coder workspace (installed to ~/.local/bin/ccremote-spawn via dotfiles);
+# the listener invokes it over `coder ssh`. Also runnable by hand for testing.
+#
+#   ccremote-spawn "optional initial prompt"
+#
+# Prints the tmux session name on its last stdout line so the caller can
+# reference it.
+#
+# Why tmux: the session must outlive this script (which returns immediately) so
+# the phone has something to attach to. Remote Control attaches to that same
+# live session.
+
+PROMPT="${1:-}"
+WORKDIR="${RC_WORKDIR:-$HOME}"          # where claude starts; override per-project
+LAUNCH="${RC_CMD:-claude}"              # overridable for testing / `claude --resume`
+BOOT_WAIT="${RC_BOOT_WAIT:-5}"          # seconds to let the TUI draw before typing
+SESSION="rc-$(date +%s)"
+
+tmux new-session -d -s "$SESSION" -c "$WORKDIR" "$LAUNCH"
+
+# Keys sent before the TUI has drawn are dropped. A fixed wait is good enough
+# for a POC and survives TUI redesigns that a pane-scraping check would not.
+sleep "$BOOT_WAIT"
+
+# Connect Remote Control. Set RC_SKIP_RC=1 to exercise the plumbing without
+# burning a real remote session.
+if [[ "${RC_SKIP_RC:-0}" != "1" ]]; then
+  tmux send-keys -t "$SESSION" "/remote-control" Enter
+  sleep 2
+fi
+
+if [[ -n "$PROMPT" ]]; then
+  tmux send-keys -t "$SESSION" "$PROMPT" Enter
+fi
+
+echo "$SESSION"
