@@ -61,6 +61,37 @@ if command -v tmux >/dev/null 2>&1; then
   fi
 fi
 
+# Claude Code personal config. The style file and global CLAUDE.md are symlinked so an
+# edit in either place is the same file. settings.json is NOT symlinked: Claude Code and
+# other tools (aoe hooks) write machine-specific keys into it, so only the keys in
+# claude/settings.json are merged in. The merge must be idempotent because this script
+# re-runs on every start: hook entries already present are not appended again.
+claude_src="$dotfiles_dir/claude"
+mkdir -p "$HOME/.claude/output-styles"
+ln -sf "$claude_src/output-styles/elera-concise.md" "$HOME/.claude/output-styles/elera-concise.md"
+# Keep a hand-written global CLAUDE.md that differs, instead of silently replacing it.
+if [ -f "$HOME/.claude/CLAUDE.md" ] && [ ! -L "$HOME/.claude/CLAUDE.md" ] \
+  && ! cmp -s "$HOME/.claude/CLAUDE.md" "$claude_src/CLAUDE.md"; then
+  mv "$HOME/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md.pre-dotfiles"
+  log "moved existing ~/.claude/CLAUDE.md to CLAUDE.md.pre-dotfiles"
+fi
+ln -sf "$claude_src/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+if command -v jq >/dev/null 2>&1; then
+  settings="$HOME/.claude/settings.json"
+  [ -s "$settings" ] || echo '{}' > "$settings"
+  merged="$(jq --slurpfile add "$claude_src/settings.json" '
+    ($add[0]) as $a
+    | .outputStyle = $a.outputStyle
+    | reduce ($a.hooks | to_entries[]) as $e (.;
+        .hooks[$e.key] = ((.hooks[$e.key] // [])
+          + [$e.value[] as $entry
+             | select((.hooks[$e.key] // []) | index($entry) | not)
+             | $entry]))
+  ' "$settings")" && printf '%s\n' "$merged" > "$settings"
+else
+  log "WARNING: jq not found; Claude settings from claude/settings.json not merged"
+fi
+
 if command -v aoe >/dev/null 2>&1; then
   log "aoe already installed ($(aoe --version 2>/dev/null || echo 'version unknown')); skipping"
   exit 0

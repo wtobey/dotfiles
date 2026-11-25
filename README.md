@@ -12,6 +12,12 @@ must be executable). The script:
 - symlinks `.tmux.conf` and installs TPM + `tmux-resurrect`/`tmux-continuum` so tmux sessions
   auto-save and restore across workspace restarts. Snapshots are written under `/workspaces`
   (the persistent disk) because `~/.tmux` is wiped on every restart in Coder devcontainers.
+- sets up Claude Code personal config from `claude/`: it symlinks the "Elera Concise" output
+  style and the global `~/.claude/CLAUDE.md`, and merges `claude/settings.json`
+  (`outputStyle` + a `UserPromptSubmit` reminder hook) into `~/.claude/settings.json` with
+  `jq`. The settings file is merged, not symlinked, because Claude Code and `aoe` write
+  machine-specific keys into it. A differing hand-written `CLAUDE.md` is kept as
+  `CLAUDE.md.pre-dotfiles`.
 
 Register this repo once per Coder account:
 
